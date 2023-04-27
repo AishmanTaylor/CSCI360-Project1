@@ -148,6 +148,26 @@ additionally store some information.
    `ERROR` state).  (Hint: first write a helper function `steps ::
    MachineState -> MachineState`.)**
 
+> steps :: MachineState -> MachineState
+> steps state = case state of 
+>   ERROR -> ERROR
+>   DONE state -> DONE state
+>   WORKING [] stack -> DONE stack
+>   WORKING (instruction : top) stack -> 
+>     case instruction of
+>       PUSH n -> steps (WORKING top (n : stack))
+>       ADD -> case stack of
+>         x:y:rest' -> steps (WORKING top (x + y : rest'))
+>         _ -> ERROR
+>       SUB -> case stack of
+>         x:y:rest' -> steps (WORKING top (x - y : rest'))
+>         _ -> ERROR
+>       MUL -> case stack of
+>         x:y:rest' -> steps (WORKING top (x * y : rest'))
+>         _ -> ERROR
+> execute :: [Instruction] -> MachineState
+> execute instructions = steps (WORKING instructions [])
+
 5. **Finally, write `run :: [Instruction] -> Maybe Integer`, which
    executes the program and then returns `Nothing` if the machine
    halted with an `ERROR` or an empty stack, or `Just` the top integer
