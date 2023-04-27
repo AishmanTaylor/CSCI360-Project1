@@ -98,6 +98,13 @@ knows how to execute:
 1. **Make a data type called `Instruction` to represent the four stack
     machine instructions described above.**
 
+> data Instruction where
+>  PUSH :: Integer -> Instruction
+>  ADD  :: Instruction
+>  SUB  :: Instruction
+>  MUL  :: Instruction
+>  deriving (Show, Eq)
+
 Our machine can also be in one of three states.  Each state may
 additionally store some information.
 
@@ -116,10 +123,24 @@ additionally store some information.
    should contain whatever information the machine needs to remember
    in that state.**
 
+> data MachineState where
+>  WORKING :: [Instruction] -> [Integer] -> MachineState
+>  DONE    :: [Integer] -> MachineState
+>  ERROR   :: MachineState
+>  deriving (Show, Eq)
+
 3. **Write a function `step :: MachineState -> MachineState` which
    executes a single step of the machine.  For example, in the
    `WORKING` state it should try executing the next instruction and
    return an appropriate next state for the machine.**
+
+> step :: MachineState -> MachineState
+> step (WORKING (PUSH n : top) stack) = WORKING top (n : stack)
+> step (WORKING (ADD : top) (x:y:stack)) = WORKING top (x + y : stack)
+> step (WORKING (SUB : top) (x:y:stack)) = WORKING top (y - x : stack)
+> step (WORKING (MUL : top) (x:y:stack)) = WORKING top (x * y : stack)
+> step (WORKING [] stack) = DONE stack
+> step _ = ERROR
 
 4. **Write `execute :: [Instruction] -> MachineState`, which takes a
    program and runs the machine (starting with an empty stack) until
