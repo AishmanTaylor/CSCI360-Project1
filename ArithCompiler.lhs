@@ -217,6 +217,13 @@ finally puts some of these things together:
    the output yourself.  Though you should not *call* `readArith`, you
    can and should use its implementation as an example.)
 
+> exec :: String -> Maybe Integer
+> exec s =
+>  case parse parseArith s of
+>    Left _ -> Nothing
+>    Right a -> run (compile a)
+
+
 You should now be able to test that if `s` is any `String`, then `eval
 s == exec s`.
 
