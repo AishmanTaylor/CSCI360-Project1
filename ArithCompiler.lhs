@@ -174,6 +174,11 @@ additionally store some information.
    on the stack if the machine successfully finished and left at least
    one integer on the stack.**
 
+> run :: [Instruction] -> Maybe Integer
+> run program =
+>  case execute program of
+>    DONE (result:stack) -> Just result
+>    _ -> Nothing
 
 The compiler
 ------------
