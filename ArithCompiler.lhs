@@ -71,8 +71,7 @@ the `error` function) when given any `String` that does not parse.
 >   Right a   -> a
 
 For example, try evaluating `interp (readArith "(2+3)*4")`, which
-should result in 20. This is much more convenient than typing `interp (Bin Times
-(Bin Plus (Lit 2) (Lit 3)) (Lit 4))`.
+should result in 20. This is much more convenient than typing `interp (Bin Times(Bin Plus (Lit 2) (Lit 3)) (Lit 4))`.
 
 The abstract stack machine
 --------------------------
@@ -190,11 +189,12 @@ expressions into equivalent programs that run on the abstract machine.
 list of `Instruction`s.**
 
 > compile :: Arith -> [Instruction]
-> compile (Lit n)        = [PUSH n]
-> compile (Bin op a1 a2) = compile a1 ++ compile a2 ++ [opInstr op]
->  where opInstr Plus  = ADD
->        opInstr Minus = SUB
->        opInstr Times = MUL
+> compile (Lit n) = [PUSH n]
+> compile (Bin op a1 a2) =
+>   compile a1 ++ compile a2 ++ case op of
+>     Plus -> [ADD]
+>     Minus -> [SUB]
+>     Times -> [MUL]
 
 Of course, your compiler should output not just *any* list of
 instructions!  It should output a program which, when run on the
@@ -224,8 +224,7 @@ finally puts some of these things together:
 >    Right a -> run (compile a)
 
 
-You should now be able to test that if `s` is any `String`, then `eval
-s == exec s`.
+You should now be able to test that if `s` is any `String`, then `eval s == exec s`.
 
 Level 1
 -------
