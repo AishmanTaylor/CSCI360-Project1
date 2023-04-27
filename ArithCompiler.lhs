@@ -189,6 +189,13 @@ expressions into equivalent programs that run on the abstract machine.
 6. **Write a function `compile` which takes an `Arith` and yields a
 list of `Instruction`s.**
 
+> compile :: Arith -> [Instruction]
+> compile (Lit n)        = [PUSH n]
+> compile (Bin op a1 a2) = compile a1 ++ compile a2 ++ [opInstr op]
+>  where opInstr Plus  = ADD
+>        opInstr Minus = SUB
+>        opInstr Times = MUL
+
 Of course, your compiler should output not just *any* list of
 instructions!  It should output a program which, when run on the
 abstract machine, successfully produces the same integer result as the
