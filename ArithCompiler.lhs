@@ -29,7 +29,7 @@ First, some extensions and imports we will need for the parser; you
 don't need to worry about these.
 
 > {-# LANGUAGE GADTs #-}
->
+> {-# OPTIONS_GHC -Wall #-}
 > import Prelude hiding ((<$>), (<$), (<*>), (<*), (*>))
 > import Parsing
 
@@ -97,6 +97,17 @@ knows how to execute:
 1. **Make a data type called `Instruction` to represent the four stack
     machine instructions described above.**
 
+- The imaginary machine first creates a ADT called Instruction with the following constructors:
+-   PUSH takes in an integer and pushes it onto the stack, hence the Integer -> Instruction 
+-   ADD will take two integers off the stack, add them together, and push them back onto the stack. 
+    Due to the stack being both the input and output we can just call Instruction. 
+-   SUB will take two integers off the stack, subtract them together, and push them back onto the stack. 
+    Due to the stack being both the input and output we can just call Instruction.
+-   MUL will take two integers off the stack, multiply them together, and push them back onto the stack. 
+    Due to the stack being both the input and output we can just call Instruction.
+-   deriving (Show, Eq) allows for this ADT to be printed to the console and to be compared using Show and Eq respectively. 
+- This is to serve as a way to house all the valid operations our machien can undertake. 
+
 > data Instruction where
 >  PUSH :: Integer -> Instruction
 >  ADD  :: Instruction
@@ -122,6 +133,14 @@ additionally store some information.
    should contain whatever information the machine needs to remember
    in that state.**
 
+- The imaginary machine then creates a ADT called MachineState with the following constructors:
+-   WORKING takes in a list of Instructions and a list of Integers to represent a machine in working order
+    that is currently executing a 'program'. This is what gets us [Instruction] -> [Integer] -> MachineState. 
+-   DONE takes in a list of Integers and represents a machine that has finished its assigned program. This is what gets us
+    [Integer] -> MachineState.
+-   ERROR represents a machine that has hit an error during execution and failed to run its current 'program'. 
+-   deriving (Show, Eq) allows for this ADT to be printed to the console and to be compared using Show and Eq respectively. 
+
 > data MachineState where
 >  WORKING :: [Instruction] -> [Integer] -> MachineState
 >  DONE    :: [Integer] -> MachineState
@@ -132,6 +151,21 @@ additionally store some information.
    executes a single step of the machine.  For example, in the
    `WORKING` state it should try executing the next instruction and
    return an appropriate next state for the machine.**
+
+- step takes in a MachineState and will be giving a new MachineState as an output. 
+- step accounts for each possible MachineState type. 
+- As WORKING is the first constructor of MachineState it is checked first. 
+-   WORKING has four four possible input Instruction: PUSH, ADD, SUB, MUL along with the stack of integers possible. 
+-     step (WORKING (PUSH n : top) stack) simply takes in the PUSH Instruction, the Integer wishing to be pushed n, the location 
+      of the top of the stack needed, and the stack of integers itself. The updated MachineState now has the pushed Integer on top
+      and the remaining Instructions in the stack. 
+-     step (WORKING (ADD : top) (x:y:stack)), (WORKING (SUB : top) (x:y:stack)), (WORKING (MUL : top) (x:y:stack)) all have similar design
+      philisophy as they utilize the stack in the same way. They access the top of the stack, pop two numbers x and y off 
+      the top of the stack, performs the associated operator on them (+,-, or *), and pushes them back onto the stack.
+-   step (WORKING [] stack) is utilized when the stack has no more Instruction remaining. As the stack has been completed successfully
+    instead of pushing to the top, the stack is returned with DONE as the final arguemnt. 
+-   step _ is a final catch all MachineState that returns an ERROR if anything other than the above MachineState occur as an error
+    most likely has happened. 
 
 > step :: MachineState -> MachineState
 > step (WORKING (PUSH n : top) stack) = WORKING top (n : stack)
@@ -147,23 +181,39 @@ additionally store some information.
    `ERROR` state).  (Hint: first write a helper function `steps ::
    MachineState -> MachineState`.)**
 
+- steps takes in a MachineState and will be giving a new MachineState as output.
+-   steps pattern matches the state across the possible Instruction which can influence the MachineState.
+-     If there is an ERROR the MachineState is an ERROR.
+-     If the state simply registers a Done result, the MachineState is a Done result.
+-     If the state is WORKING and reaches the end of the stack, the MachineState is a Done stack.
+-     If the state has at least one instruction then pattern matching must be conducted to determine what must be done. 
+-       If the instruction is PUSH n it creates a new MachineState and returns the integer n on top of the stack and the remaining
+        instructions in top. 
+-       Like with step ADD, SUB, and MUL take on similar structuring with differing operators(+,-, or * respectively). If the 
+        instruction recieved is ADD, SUB, or MUL then the stack is checked to see if it has two integers, if it does the appropriate
+        operation is done and the result is pushed back onto the stack and a new MachineState is created. If any other possibility
+        is present like there are not two integers in the stack, an error is returned. 
+- execute takes in a list of Instruction and returns a MachineState. 
+- It uses the steps function as a helper function and feeds the list into steps until the list reaches the end or an error is encountered. 
+
 > steps :: MachineState -> MachineState
 > steps state = case state of 
 >   ERROR -> ERROR
->   DONE state -> DONE state
+>   DONE result -> DONE result
 >   WORKING [] stack -> DONE stack
 >   WORKING (instruction : top) stack -> 
 >     case instruction of
 >       PUSH n -> steps (WORKING top (n : stack))
->       ADD -> case stack of
+>       ADD    -> case stack of
 >         x:y:rest' -> steps (WORKING top (x + y : rest'))
->         _ -> ERROR
+>         _         -> ERROR
 >       SUB -> case stack of
 >         x:y:rest' -> steps (WORKING top (x - y : rest'))
->         _ -> ERROR
+>         _         -> ERROR
 >       MUL -> case stack of
 >         x:y:rest' -> steps (WORKING top (x * y : rest'))
->         _ -> ERROR
+>         _          -> ERROR
+>
 > execute :: [Instruction] -> MachineState
 > execute instructions = steps (WORKING instructions [])
 
@@ -173,11 +223,19 @@ additionally store some information.
    on the stack if the machine successfully finished and left at least
    one integer on the stack.**
 
+- run takes in a list of Instruction and returns a Maybe Integer. 
+- run pattern matches the various states of executing instructions possible. 
+-   If execute returns ERROR then no Integer can be returned so Nothing is returned. 
+-   If execute returns WORKING then the machine is still running and therefore no Integer can be returned so Nothing is returned too. 
+-   If execute returns DONE but with an empty stack no Integer can be returned from an empty stack so Nothing is returned. 
+-   If execute returns DONE with a successfully processed stack the top Integer is extracted and returned. 
+
 > run :: [Instruction] -> Maybe Integer
-> run program =
->  case execute program of
->    DONE (result:stack) -> Just result
->    _ -> Nothing
+> run instructions = case execute instructions of
+>    ERROR       -> Nothing
+>    WORKING _ _ -> Nothing
+>    DONE []     -> Nothing
+>    DONE (x:_)  -> Just x
 
 The compiler
 ------------
@@ -188,11 +246,19 @@ expressions into equivalent programs that run on the abstract machine.
 6. **Write a function `compile` which takes an `Arith` and yields a
 list of `Instruction`s.**
 
+- compile takes in an Arith and returns a list of Instruction for running in the machine. 
+- If compile is given just a number, in the form of Lit n, it returns a list of instructions containing PUSH n where 
+  the n is the same as Lit n.
+- If it recieves an operation, in the form of Bin op a1 a2, it will recursively call itself onto a1 and a2 until it hits Lit n 
+  and PUSH n is added onto the list of Instruction. Then it pattern matches the operator from the given list of possibilities. 
+-   Like with all the other previous examples Plus, Minus, and Times follow a similar structure. If op is Plus it appends ADD onto 
+    the stack of Instruction, if op is Minus it appends SUB, and if it is Times, it appends MUL.
+
 > compile :: Arith -> [Instruction]
 > compile (Lit n) = [PUSH n]
 > compile (Bin op a1 a2) =
 >   compile a1 ++ compile a2 ++ case op of
->     Plus -> [ADD]
+>     Plus  -> [ADD]
 >     Minus -> [SUB]
 >     Times -> [MUL]
 
@@ -217,10 +283,15 @@ finally puts some of these things together:
    the output yourself.  Though you should not *call* `readArith`, you
    can and should use its implementation as an example.)
 
+- exec takes in a String and returns a Maybe Integer
+- exec takes String s and pattern matches it through the arith parser. 
+-   If parsing fails it returns nothing. 
+-   If parsing succeeds it passes the result to the compile function and then executes run on the result to get a Integer. 
+
 > exec :: String -> Maybe Integer
 > exec s =
 >  case parse parseArith s of
->    Left _ -> Nothing
+>    Left _  -> Nothing
 >    Right a -> run (compile a)
 
 
